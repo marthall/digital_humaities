@@ -24,20 +24,20 @@ def clean_article(article_str):
 	'''
 	words_list = words(article_str)
 	result = []
-	removed = 0
+	broken = 0
 	good = 0
 	fixed = 0
 	for word in words_list:
 		corrected_word, is_corrected = correct(word, CORRECTION_TRESHOLD)
 		if corrected_word is None:
-			removed += 1
-		else:
-			result.append(corrected_word)
-			if corrected_word and is_corrected:
-				fixed += 1
-			elif corrected_word and not is_corrected:
-				good += 1
-	return (result, good, fixed, removed)
+			broken += 1
+		elif corrected_word and is_corrected:
+			fixed += 1
+		elif corrected_word and not is_corrected:
+			good += 1
+		result.append(corrected_word if corrected_word else word)
+	#print("Gain %%", (len(set(words_list))-float(len(set(result))))/len(set(words_list))*100.0)
+	return (''.join(result), good, fixed, broken)
 
 
 if __name__ == "__main__":
@@ -53,4 +53,10 @@ if __name__ == "__main__":
 		with open(filename) as f:
 			reader = csv.reader(f,  delimiter='\t')
 			for row in reader:
-				fixed.append([])
+				result, good, num_fixed, broken = clean_article(row[1])
+				fixed.append([row[0], result])
+				#print(good,fixed,broken)
+		out_file = "cleaned_csv/{dataset}/{year}_{month}.csv".format(dataset=DATASET_STR, year=str(year), month=str(month))
+		with open(out_file, 'w', encoding='utf-8') as f:
+			csv_writer = csv.writer(f, delimiter='\t')
+			csv_writer.writerows(fixed)
