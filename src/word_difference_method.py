@@ -1,12 +1,10 @@
-import sqlite3
 from tqdm import tqdm
 import csv
 from pprint import pprint as pp
 import re
 import os
 from bs4 import BeautifulSoup
-
-DATABASE_NAME = "data_with_hash.db"
+import sys
 
 # Workaround for printing unicode stuff on Windows CMD (gokcen)
 try:
@@ -24,6 +22,7 @@ hdlr.setFormatter(formatter)
 logger.addHandler(hdlr) 
 logger.setLevel(logging.WARNING)
 
+DUMP_LOG = False
 
 # Bullshit detector.
 # See: https://regex101.com/r/dT5xA1/2
@@ -50,47 +49,43 @@ def get_filtered_article_tuple(raw_article):
 		if len(str(art_tpl[1])) > 60 and len(BULLSHIT_REGEX.findall(str(art_tpl[1]))) < 0.4*len(str(art_tpl[1]).split(' ')):
 			return art_tpl
 		else:
-			logger.warning("Discarded text: " + art_tpl[1])
+			if DUMP_LOG:
+				logger.warning("Discarded text: " + art_tpl[1])
 			return None
 	except:
 		return None
 
-def get_month_lxml(year, month):
-	file_path = "./data/JDG/{year}/{month:0>2}.xml".format(month=month, year=year)
-	soup = BeautifulSoup(open(file_path,encoding='utf-8'), "lxml")
+def get_month_lxml(year, month,folder="JDG"):
+	'''
+	Returns list of soup objects of given year and month from the package 'folder'
+	'''
+	file_path = "./data/{folder}/{year}/{month:0>2}.xml".format(month=month, year=year, folder=folder)
+	try:
+		soup = BeautifulSoup(open(file_path,encoding='utf-8'), "lxml")
+	except FileNotFoundError:
+		return []
 	return soup.find_all("article")
 
-
-def create_database_with_hash_column(): #TODO remove this if we decide to avoid SQL stuff
-	if not os.path.isfile("./" + DATABASE_NAME):
-		conn = sqlite3.connect(DATABASE_NAME)
-		c = conn.cursor()
-		c.execute('''CREATE TABLE articles
-						(issue_date date, content text, hash_val integer UNIQUE) ''')
-		conn.commit()
-		c.close()
-	pass
-
-def generate_csv_files(from_year,to_year): #years inclusive
+def generate_csv_files(from_year,to_year,folder="JDG"): #years inclusive
 	if not os.path.exists("csv"):
 		os.makedirs("csv")
 	
 	#Convert xml's to csv		
 	for year in range(from_year,to_year + 1):
 		for month in tqdm(range(1, 13)):
-			if os.path.isfile("./csv/%d_%d.csv" % (year, month)):
+			if os.path.isfile("./csv/%s/%d_%d.csv" % (folder, year, month)):
 				continue
-			with open("./csv/%d_%d.csv" % (year, month), 'w', newline='') as f:
-				raw_articles = get_month_lxml(year, month)
+			with open("./csv/%s/%d_%d.csv" % (folder, year, month), 'w', newline='') as f:
+				raw_articles = get_month_lxml(year, month, folder)
 				articles = filter(lambda x: x is not None, map(get_filtered_article_tuple, raw_articles))
-				writer = csv.writer(f, delimiter='\t')
-				writer.writerows(articles)
+				if articles:
+					writer = csv.writer(f, delimiter='\t')
+					writer.writerows(articles)
 		print("Year: %d Finished CSV writing" % year)
 	pass
 
 with open('french_words.txt', 'r') as f:
 	to_be_removed = set(map(lambda x : x.strip().lower(), f.readlines()))
-	#print(to_be_removed)
 
 def get_ratio(left_paragraph, right_paragraph):
 	# Summary of operations below:
@@ -100,19 +95,37 @@ def get_ratio(left_paragraph, right_paragraph):
 
 	return (float(len(left_set.intersection(right_set))),float(len(left_set.union(right_set))), left_set.intersection(right_set))
 
+
+
+
+
 if __name__ == "__main__":
 	# Uncomment the code below to generate CSV files.
-	# generate_csv_files(1921, 1960)
+	if len(sys.argv) == 3:
+		from_yr = int(sys.argv[1])
+		to_yr = int(sys.argv[2])
+		print("Working from %d to %d" % (from_yr, to_yr))
+		generate_csv_files(from_yr, to_yr,"GDL")
+	exit()
 
 	test_string = """
-		Numéro littéraire et économique GENEVE , 31 juillet 1921 Les Feux sur la montagne Ce soir , les feux allumés sur les montagnes répondront à ceux qui brilleront dans la plaine . De Baie à Genève , de Lugano à Delémont , les cloches diront aux Suisses que le 1 août 1291 retentit encore dans les cœurs . Et l'étranger , respectueux de cette coutume très simple de célébrer le plus grand anniversaire de l'histoire helvétique , mêlera peut-être ses chants aux nôtres . Ce sera émouvant et beau . 'Mais l'émotion d'une minute fugitive ni la beauté d'un héroïque passé ne constituent un Peuple . Elles ne lui donnent pas sa vitalité . Elles l'aident , assurément , mais ne seraient que les béquilles du sentimentalisme si la Suisse ne trouvait en elle-même des appuis plus sûrs . A coups de lance et d'épée , luttant contre ceux-ci un jour , contre ceux-là le lendemain , unis dans leurs aspirations démocratiques et soumis au pacte qu'ils avaient Juré , . armant non seulement leurs
+		L'armée française du commandant Lamy comprenait plus de 700 hommes depuis l'arrivée de la colonne Gentil ; leurs alliés baguirmiens comptaient au total 600 fusils et 200 cavaliers. Le tata (camp retranché) de Rabah (un carré de 800 m de côté adossé au Chari) était à 6 km en aval de Kousséri, en face du site actuel de Ndjamena. Il fallait ménager les susceptibilités et respecter le partage colonial décidé au traité de Berlin de 1885 : le camp de Rabah étant en territoire « allemand », Lamy s'adressa à Omar Sanda, héritier légitime du shehu Hashim de Bornou. Ce dernier donna officiellement à Gaourang de Baguirmi et à ses "alliés" toute licence pour chasser Rabah et le rétablir sur le trône.
+
+		Sortant de Kousséri les Français formèrent 3 colonnes. Celle de droite commandée par le capitaine Joalland (mission Afrique Centrale) : 174 fusils, 1 canon de 80 ; celle du centre (mission Gentil), par le capitaine Robillot : 340 fusils, 2 canons de 80 ; celle de gauche (mission saharienne), par le commandant Reibell : 274 fusils, 1 canon de 42.
+
+		Lamy attaqua le camp de Rabah sur 3 côtés, ne laissant libre que la berge du Chari. Après deux heures de fusillade et de canonnade on chargea, le tata fut enlevé et évacué par ses défenseurs en fuite. Rabah passa alors à la contre-attaque qui fut dévastatrice : Lamy fut mortellement touché par une balle, avec le capitaine de Cointet. Mais les Sénégalais arrêtèrent Rabah qui, blessé, s'enfuit, tandis que les fuyards qui tentaient de franchir le fleuve étaient fusillés dans le Chari.
+
+		La tête de Rabah rapportée comme trophée
+		La tête de Rabah rapportée comme trophée
+		Au cours de la poursuite Rabah fut reconnu par un tirailleur de la mission Afrique Centrale, ancien déserteur de sa propre armée, qui l'acheva d'une balle dans la tête. Apprenant qu'il y avait une prime pour Rabah, il retourna sur le terrain et rapporta sa tête et sa main droite. Rabah fut unanimement identifié. Les Baguirmiens s'acharneront sur ses restes.
 	"""
 	results = []
-	for year in range(1921,1926):
+	for year in range(1826,1950):
 		for month in tqdm(range(1, 13)):
 			with open("./csv/%d_%d.csv" % (year, month), 'r') as f:
 				reader = csv.reader(f, delimiter="\t")
-				results += [(line[1], get_ratio(test_string, line[1])) for line in reader]
+				results += [(line[0], get_ratio(test_string, line[1])) for line in reader]
+		print("%d done" % year)
 	results.sort(key=lambda x : x[1][0]/x[1][1], reverse=True)
 	pp(results[:3])
 
@@ -126,33 +139,3 @@ if __name__ == "__main__":
 	# 2.7 GB set of XML files became ~1 GB CSV files. (XML tags & articles with OCR errors & very short articles like title's are REMOVED)
 	# Also very fast to read and process. For now, CSV files are named like YEAR_MONTH.xml but If we decide that we don't need 'month' stuff
 	# (we can still access the date information in article though) we can concatanate files in a year and processing them might be faster (?).
-
-
-
-
-
-
-
-
-	##### THE CODE BELOW was WRITTEN before CSV stuff. Ignore them. ####
-
-	# Create DB if not already here
-	# create_database_with_hash_column()
-	# Check currently available date's
-	# conn = sqlite3.connect(DATABASE_NAME)
-	# cur = conn.cursor()
-	#cur.execute(''' SELECT issue_date from articles order by issue_date LIMIT 500 ''')
-	#pp(cur.fetchall())
-
-	# for year in range(1921,1925):
-	# 	articles = []
-	# 	total_article_count = 0
-	# 	for month in tqdm(range(1, 13)):
-	# 		raw_articles = get_month(year, month)
-	# 		total_article_count += len(raw_articles)
-	# 		articles += list(filter(lambda x: x is not None, map(get_filtered_article_tuple, raw_articles)))
-	# 	print("Parsed articles: %5d, Removed articles: %5d" % (total_article_count, total_article_count-len(articles)))
-	# 	cur.executemany(''' INSERT or IGNORE into articles (issue_date, content, hash_val) values (?, ?, ?)''', articles)
-	# 	cur.commit()
-	# 	print("Tried to insert: %5d, Actually inserted: %5d" % (len(articles), cur.rowcount))
-	# 	print("%d Finished" % year)

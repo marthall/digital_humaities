@@ -4,3 +4,8 @@ data/*
 __pycache__
 *.pyc
 *.log
+*.zip
+*.bat
+src/data
+src/csv
+src/buckets
