@@ -21,7 +21,7 @@ except ImportError:
 	import json
 
 #LOADING MODULE FROM UPPER DIR - hackish..
-import sys, os
+import sys, os,csv
 old_dir = os.path.abspath(os.curdir)
 os.chdir('..')
 sys.path.append(os.path.abspath(os.curdir))
@@ -44,9 +44,11 @@ def server_static(filepath):
 def process():
 	text = request.forms.get('input') 
 	results = give_results(text, 1800, 2000)
+	dummy = ["matching: |X ∩ Y|", "dice: 2|X ∩ Y|/(|X| + |Y|)", "jaccard: |X ∩ Y|/|X ∪ Y|", "overlap: |X ∩ Y|/min(|X|,|Y|)", "cosine: |X ∩ Y|/sqrt(|X|*|Y|)"]
 	return dict(data=[{
 		"x": list(map(lambda x : x[0], results)),
 		"y": list(map(lambda x : x[1][y_idx], results)),
+		"name": dummy[y_idx]
 	} for y_idx in range(5)])
 
 @route('/about_dataset')
@@ -77,5 +79,37 @@ def about_dataset():
 		"x": x,
 		"y": y,
 	}])
+
+
+@route('/api/about_spellcheck')
+def about_spellcheck():
+
+	data = []
+	for fname in ["JDG", "GDL"]:
+		with open(fname + ".csv", 'r') as infile:
+			reader = list(csv.reader(infile,  delimiter='\t'))
+			dates = list(map(lambda x : x[0], reader))
+			unique_before = list(map(lambda x : float(x[1]), reader))
+			unique_after = list(map(lambda x : float(x[2]), reader))
+			gain = list(map(lambda x : float(float(x[1])-float(x[2]))/float(x[1])*100.0, reader))
+			good = list(map(lambda x : float(x[3]), reader))
+			fixed = list(map(lambda x : float(x[4]), reader))
+			dummy = {
+				'unique_after': unique_after,
+				'unique_before': unique_before,
+				'gain': gain,
+				'good': good,
+				'fixed': fixed
+			}
+			for k,v in dummy.items():
+				data.append({
+					'name': fname + k,
+					'y': v,
+					'x': dates
+					})
+		
+	
+	return dict(data=data)
+
 
 run(host='localhost', port=8080, reloader=True)

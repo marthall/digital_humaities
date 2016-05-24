@@ -25,6 +25,12 @@
         <div id="chart" style="width:90%;height:500px;"></div>
       </div>
     </div>
+    <div class="row">
+      <div class="col-sm-12">
+        <h2>Spell Check & Stemming</h2>
+        <div id="chart2" style="width:90%;height:500px;"></div>
+      </div>
+    </div>
   </div> <!-- /container -->        
   <script src="js/vendor/jquery-1.11.2.js"></script>
   <script src="js/vendor/bootstrap.min.js"></script>
@@ -35,6 +41,15 @@
   $(document).ready(function(e){
     $.get( "/api/about_dataset", function(response) {
       TESTER = document.getElementById('chart');
+      Plotly.plot( TESTER, response.data, {
+          margin: { t: 0 } } );
+    })
+    .fail(function() {
+      alert( "error" );
+    })
+
+    $.get( "/api/about_spellcheck", function(response) {
+      TESTER = document.getElementById('chart2');
       Plotly.plot( TESTER, response.data, {
           margin: { t: 0 } } );
     })

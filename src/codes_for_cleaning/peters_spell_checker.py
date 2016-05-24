@@ -105,5 +105,5 @@ def correct(word,treshold=60):
         #return cand, "stemmed:",stemmer.stem(cand), NWORDS.get(cand)
         return (stemmer.stem(cand), True)
     else:
-        return (None, False)
+        return (word, False)
     #return d.suggest(word)
