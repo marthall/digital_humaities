@@ -1,2 +1,4 @@
 beautifulsoup4==4.4.1
 tqdm==3.8.0
+ujson==1.35
+pyenchant==1.6.6
