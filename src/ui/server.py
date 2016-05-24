@@ -2,17 +2,17 @@ from bottle import route, run, template, static_file, redirect, request
 import itertools
 
 
-class cd:
-    """Context manager for changing the current working directory"""
-    def __init__(self, newPath):
-        self.newPath = os.path.expanduser(newPath)
+# class cd:
+#     """Context manager for changing the current working directory"""
+#     def __init__(self, newPath):
+#         self.newPath = os.path.expanduser(newPath)
 
-    def __enter__(self):
-        self.savedPath = os.getcwd()
-        os.chdir(self.newPath)
+#     def __enter__(self):
+#         self.savedPath = os.getcwd()
+#         os.chdir(self.newPath)
 
-    def __exit__(self, etype, value, traceback):
-        os.chdir(self.savedPath)
+#     def __exit__(self, etype, value, traceback):
+#         os.chdir(self.savedPath)
 
 
 try:
@@ -20,16 +20,8 @@ try:
 except ImportError:
 	import json
 
-#LOADING MODULE FROM UPPER DIR - hackish..
 import sys, os,csv
-old_dir = os.path.abspath(os.curdir)
-os.chdir('..')
-sys.path.append(os.path.abspath(os.curdir))
-from generate_word_buckets import give_results
-os.chdir(old_dir)
-
-#OK, HACK END
-
+from backend.web_helper import get_naive_bayes
 
 
 @route('/')
@@ -42,14 +34,25 @@ def server_static(filepath):
 
 @route('/api', method='POST')
 def process():
+	# results = give_results(text, 1800, 2000)
+	# dummy = ["matching: |X ∩ Y|", "dice: 2|X ∩ Y|/(|X| + |Y|)", "jaccard: |X ∩ Y|/|X ∪ Y|", "overlap: |X ∩ Y|/min(|X|,|Y|)", "cosine: |X ∩ Y|/sqrt(|X|*|Y|)"]
+	# return dict(data=[{
+	# 	"x": list(map(lambda x : x[0], results)),
+	# 	"y": list(map(lambda x : x[1][y_idx], results)),
+	# 	"name": dummy[y_idx]
+	# } for y_idx in range(5)])
+
 	text = request.forms.get('input') 
-	results = give_results(text, 1800, 2000)
-	dummy = ["matching: |X ∩ Y|", "dice: 2|X ∩ Y|/(|X| + |Y|)", "jaccard: |X ∩ Y|/|X ∪ Y|", "overlap: |X ∩ Y|/min(|X|,|Y|)", "cosine: |X ∩ Y|/sqrt(|X|*|Y|)"]
+	years, probabilities = get_naive_bayes(text)
+
 	return dict(data=[{
-		"x": list(map(lambda x : x[0], results)),
-		"y": list(map(lambda x : x[1][y_idx], results)),
-		"name": dummy[y_idx]
-	} for y_idx in range(5)])
+		"x": years,
+		"y": probabilities,
+		"name": "Naive Bayes prediction"
+	}])
+
+
+
 
 @route('/about_dataset')
 def about_dataset():
@@ -57,28 +60,8 @@ def about_dataset():
 
 @route('/api/about_dataset')
 def about_dataset():
-
-	with open("result", 'r') as infile:
-		data = [line.split() for line in infile]
-		d = dict()
-		for k, g in itertools.groupby(data, lambda x: x[1][:4]):
-			d[int(k)] = sum(map(lambda x: int(x[0]), g))
-
-	x = []
-	y = []
-	with cd("../buckets/JDG"):
-		for year in range(1800,2000):
-			if not os.path.isfile("%d_stemmed.json" % year):
-				continue
-			with open("%d_stemmed.json" % year, 'r') as infile:
-				obj = json.load(infile)
-				if d[year]:
-					x.append(year)
-					y.append(float(obj["number_of_broken_words"])/d[year])
-	return dict(data=[{
-		"x": x,
-		"y": y,
-	}])
+	with open('after_cleaning_information.json', "r") as f:
+		return json.load(f)
 
 
 @route('/api/about_spellcheck')
@@ -112,4 +95,4 @@ def about_spellcheck():
 	return dict(data=data)
 
 
-run(host='localhost', port=8080, reloader=True)
+run(host='localhost', port=8000, reloader=True)
