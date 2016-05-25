@@ -16,12 +16,18 @@
     <div class="row">
       <div class="col-sm-12">
         <h2>Information</h2>
+        <p>
+          Charts below simply gives some statistical information about dataset. In first one, articles were examined in yearly buckets (articles of that year merged into one file). 'Size after cleaning (per year)' shows the number of unique words of that year after fixing words and removing unrecoverable words. 'Number of merged (words per year)' and 'Original Size (words per year)' are self-explanatory. 'Number of stemmed' gives number of words stemmed with snowball-stemmer. "Number of broken (words per year)" gives number of unrecoverable words. The most important information in these charts is "Broken/Size Ratio", which you can see there are proportionally more errors in earlier years.
+          </p>
         <div id="chart" style="width:90%;height:500px;"></div>
       </div>
     </div>
     <div class="row">
       <div class="col-sm-12">
         <h2>Spell Check & Stemming</h2>
+        <p>
+          On the other hand this chart below shows the reduction of percentage of words after stemming/spellchecking recovarable words and not touching unrecovarable ones.
+        </p>
         <div id="chart2" style="width:90%;height:500px;"></div>
       </div>
     </div>
